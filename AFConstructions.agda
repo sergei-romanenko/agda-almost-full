@@ -21,11 +21,13 @@
 
 module AFConstructions where
 
+open import Level
+  renaming (zero to lzero; suc to lsuc)
+
 open import Data.Bool
-open import Data.Sum
-  renaming (map to map⊎)
-open import Data.Product
-  renaming (map to map×)
+open import Data.Sum as Sum
+  using (_⊎_; inj₁; inj₂; [_,_]′ )
+open import Data.Product as Prod
 open import Data.Empty
 open import Data.Unit
   using (⊤; tt)
@@ -53,8 +55,6 @@ open import Relation.Binary.Product.Pointwise
   using (_×-cong_)
 
 open import Induction.WellFounded
-
-import Level
 
 open import AlmostFull
 
@@ -87,7 +87,7 @@ oplus-nullary : ∀ {ℓ} {X : Set ℓ} {C : Rel X ℓ} {A B : Set ℓ} {CA : Re
   Almost-full (λ x y → C x y ⊎ B) →
   Almost-full (λ x y → C x y ⊎ A × B)
 
-oplus-nullary {_} {X} {C} {A} {B} {CA} (af-zt ra) ca⇒⊎ afB =
+oplus-nullary {_} {X} {C} {A} {B} {CA} (now ra) ca⇒⊎ afB =
   af-⇒ afB
     (λ x y →
       (C x y ⊎ B)
@@ -100,7 +100,7 @@ oplus-nullary {_} {X} {C} {A} {B} {CA} (af-zt ra) ca⇒⊎ afB =
   where open Related.EquationalReasoning
     
 
-oplus-nullary {_} {X} {C} {A} {B} {CA} afR ca⇒⊎ (af-zt rb) =
+oplus-nullary {_} {X} {C} {A} {B} {CA} afR ca⇒⊎ (now rb) =
   af-⇒ afR
     (λ x y → 
       CA x y
@@ -112,8 +112,8 @@ oplus-nullary {_} {X} {C} {A} {B} {CA} afR ca⇒⊎ (af-zt rb) =
       (C x y ⊎ A × B) ∎)
   where open Related.EquationalReasoning
 
-oplus-nullary {_} {X} {C} {A} {B} {CA} (af-sup sa) ca⇒⊎ (af-sup sb) =
-  af-sup (λ u →
+oplus-nullary {_} {X} {C} {A} {B} {CA} (later sa) ca⇒⊎ (later sb) =
+  later (λ u →
     af-⇒
       (Almost-full (λ x y → (C x y ⊎ C u x) ⊎ A × B) ∋
        oplus-nullary (sa u)
@@ -176,12 +176,12 @@ oplus-unary-sup-sup : ∀ {ℓ} {X : Set ℓ} {C : Rel X ℓ} {A B : X → Set �
   (∀ x y → CB x y → C x y ⊎ B x) →
   Almost-full (λ x y → C x y ⊎ (A x × B x))
 
-oplus-unary {C = C} (af-zt ra) ca⇒⊎ t afB cb⇒⊎ =
+oplus-unary {C = C} (now ra) ca⇒⊎ t afB cb⇒⊎ =
   oplus-unary-zt ra ca⇒⊎ t afB cb⇒⊎
 
 oplus-unary {_} {X} {C} {A} {B} {CA}
-            (af-sup sa) ca⇒⊎ {CB} zt (af-zt# rb) cb⇒⊎ =
-  af-sup (λ u → af-⇒ (sa u) (λ x y →
+            (later sa) ca⇒⊎ {CB} zt (now# rb) cb⇒⊎ =
+  later (λ u → af-⇒ (sa u) (λ x y →
     (CA x y ⊎ CA u x)
       ∼⟨ flip _,_ (rb x y) ⊎-cong flip _,_ (rb u x) ⟩
     (CA x y × CB x y ⊎ CA u x × CB u x)
@@ -192,8 +192,8 @@ oplus-unary {_} {X} {C} {A} {B} {CA}
     ((C x y ⊎ A x × B x) ⊎ (C u x ⊎ A u × B u)) ∎))
   where open Related.EquationalReasoning
 
-oplus-unary (af-sup sa) ca⇒⊎ (sup g) (af-sup# .g sb) cb⇒⊎ =
-  oplus-unary-sup-sup sa ca⇒⊎ g (af-sup# g sb) cb⇒⊎
+oplus-unary (later sa) ca⇒⊎ (sup g) (later# .g sb) cb⇒⊎ =
+  oplus-unary-sup-sup sa ca⇒⊎ g (later# g sb) cb⇒⊎
 
 oplus-unary-zt {_} {X} {C} {A} {B} {CA} ra ca⇒⊎ {CB} t afB cb⇒⊎ =
   af#⇒af
@@ -208,15 +208,15 @@ oplus-unary-zt {_} {X} {C} {A} {B} {CA} ra ca⇒⊎ {CB} t afB cb⇒⊎ =
         (C x y ⊎ A x × B x) ∎))
   where open Related.EquationalReasoning
 
-oplus-unary-?-sup (af-zt r) ca⇒⊎ g (af-sup# .g sb) cb⇒⊎ =
+oplus-unary-?-sup (now r) ca⇒⊎ g (later# .g sb) cb⇒⊎ =
  oplus-unary-zt (λ x y → ca⇒⊎ x y (r x y)) (λ x y z → z)
-                (sup g) (af-sup# g sb) cb⇒⊎
-oplus-unary-?-sup (af-sup sa) ca⇒⊎ g (af-sup# .g sb) cb⇒⊎ =
-  oplus-unary-sup-sup sa ca⇒⊎ g (af-sup# g sb) cb⇒⊎
+                (sup g) (later# g sb) cb⇒⊎
+oplus-unary-?-sup (later sa) ca⇒⊎ g (later# .g sb) cb⇒⊎ =
+  oplus-unary-sup-sup sa ca⇒⊎ g (later# g sb) cb⇒⊎
 
 oplus-unary-sup-sup {_} {X} {C} {A} {B} {CA} sa ca⇒⊎ {CB}
-                                         g (af-sup# .g sb) cb⇒⊎ =
-  af-sup (λ u →
+                                         g (later# .g sb) cb⇒⊎ =
+  later (λ u →
     af-⇒
       (oplus-nullary-cor (helper-a u) (helper-b u))
       (λ x y →
@@ -250,7 +250,7 @@ oplus-unary-sup-sup {_} {X} {C} {A} {B} {CA} sa ca⇒⊎ {CB}
           g
           (af#-⇒
             (sup g)
-            (af-sup# g sb)
+            (later# g sb)
             (λ x y →
                CB x y
                  ∼⟨ cb⇒⊎ x y ⟩
@@ -269,7 +269,7 @@ oplus-unary-sup-sup {_} {X} {C} {A} {B} {CA} sa ca⇒⊎ {CB}
     helper-b u =
       af-⇒
         (oplus-unary
-          (af-sup sa)
+          (later sa)
           ((λ x y →
             CA x y
               ∼⟨ ca⇒⊎ x y ⟩
@@ -321,30 +321,30 @@ oplus-binary-sup-sup : ∀ {ℓ} {X : Set ℓ} {A B : Rel X ℓ} →
   (∀ u → Almost-full (λ x y → B x y ⊎ B u x)) → 
   Almost-full (λ x y → A x y × B x y)
 
-oplus-binary (af-zt ra) (af-zt rb)  =
-  af-zt (λ x y → ra x y , rb x y)
-oplus-binary (af-zt ra)  (af-sup sb) =
+oplus-binary (now ra) (now rb)  =
+  now (λ x y → ra x y , rb x y)
+oplus-binary (now ra)  (later sb) =
   oplus-binary-zt-sup ra sb
-oplus-binary {A = A} {B = B} (af-sup sa) (af-zt rb) = af-sup (λ u →
+oplus-binary {A = A} {B = B} (later sa) (now rb) = later (λ u →
   af-⇒ (sa u) (λ x y →
     (A x y ⊎ A u x)
       ∼⟨ flip _,_ (rb x y) ⊎-cong flip _,_ (rb u x) ⟩
     (A x y × B x y ⊎ A u x × B u x) ∎))
   where open Related.EquationalReasoning
-oplus-binary (af-sup sa) (af-sup sb) =
+oplus-binary (later sa) (later sb) =
   oplus-binary-sup-sup sa sb
 
-oplus-binary-?-sup (af-zt ra) sb = oplus-binary-zt-sup ra sb
-oplus-binary-?-sup (af-sup sa) sb = oplus-binary-sup-sup sa sb
+oplus-binary-?-sup (now ra) sb = oplus-binary-zt-sup ra sb
+oplus-binary-?-sup (later sa) sb = oplus-binary-sup-sup sa sb
 
-oplus-binary-zt-sup {A = A} {B = B} ra sb = af-sup (λ u →
+oplus-binary-zt-sup {A = A} {B = B} ra sb = later (λ u →
   af-⇒ (sb u) (λ x y →
     (B x y ⊎ B u x)
       ∼⟨ _,_ (ra x y) ⊎-cong _,_ (ra u x) ⟩
     ((A x y × B x y) ⊎ (A u x × B u x)) ∎))
   where open Related.EquationalReasoning
 
-oplus-binary-sup-sup {A = A} {B = B} sa sb = af-sup (λ u → helper u)
+oplus-binary-sup-sup {A = A} {B = B} sa sb = later (λ u → helper u)
   where
     open Related.EquationalReasoning
     helper : ∀ u → Almost-full (λ x y → A x y × B x y ⊎ A u x × B u x)
@@ -357,7 +357,7 @@ oplus-binary-sup-sup {A = A} {B = B} sa sb = af-sup (λ u → helper u)
                  (A x y × B x y ⊎ A u x × B x y)
                    ∼⟨ (_ ∎) ⊎-cong proj₁ ⟩
                  (A x y × B x y ⊎ A u x) ∎))
-        (af-⇒ (oplus-binary (af-sup sa) (sb u))
+        (af-⇒ (oplus-binary (later sa) (sb u))
                (λ x y →
                  (A x y × (B x y ⊎ B u x))
                    ↔⟨ proj₁ ×⊎.distrib (A x y) (B x y) (B u x) ⟩
@@ -384,8 +384,8 @@ af-intersection afA afB = oplus-binary afA afB
 
 af-cofmap : ∀ {ℓ} {X Y : Set ℓ} (f : Y → X) {R : Rel X ℓ} →
   Almost-full R → Almost-full (λ x y → R (f x) (f y))
-af-cofmap f (af-zt r) = af-zt (λ x y → r (f x) (f y))
-af-cofmap f (af-sup s) = af-sup (λ z → af-cofmap f (s (f z)))
+af-cofmap f (now r) = now (λ x y → r (f x) (f y))
+af-cofmap f (later s) = later (λ z → af-cofmap f (s (f z)))
 
 ------------
 -- Products
@@ -412,20 +412,20 @@ af-product-left afA = af-cofmap proj₁ afA
 
 
 af-Bool : Almost-full (_≡_ {A = Bool})
-af-Bool = af-sup (
-  λ { true → af-sup (
-        λ { true  → af-zt (λ x y → inj₂ (inj₂ refl))
-          ; false → af-sup (
-              λ { true  → af-zt (λ x y → inj₂ (inj₁ (inj₂ refl)))
-                ; false → af-zt (λ x y → inj₂ (inj₂ (inj₁ refl)))
+af-Bool = later (
+  λ { true → later (
+        λ { true  → now (λ x y → inj₂ (inj₂ refl))
+          ; false → later (
+              λ { true  → now (λ x y → inj₂ (inj₁ (inj₂ refl)))
+                ; false → now (λ x y → inj₂ (inj₂ (inj₁ refl)))
                 })
           })
-    ; false → af-sup (
-        λ { true  → af-sup (
-              λ { true  → af-zt (λ x y → inj₂ (inj₂ (inj₁ refl)))
-                ; false → af-zt (λ x y → inj₂ (inj₁ (inj₂ refl)))
+    ; false → later (
+        λ { true  → later (
+              λ { true  → now (λ x y → inj₂ (inj₂ (inj₁ refl)))
+                ; false → now (λ x y → inj₂ (inj₁ (inj₂ refl)))
                 })
-          ; false → af-zt (λ x y → inj₂ (inj₂ refl))
+          ; false → now (λ x y → inj₂ (inj₂ refl))
           })
     })
 
@@ -455,8 +455,8 @@ left-sum-lift A (inj₂ y₁) (inj₂ y₂) = ⊤
 af-left-sum : ∀ {X Y : Set} {A : Rel X _} →
   Almost-full {X = X} A → Almost-full {X = X ⊎ Y} (left-sum-lift A)
 
-af-left-sum {A = A} (af-zt r) =
-  af-sup (λ u → af-sup (λ v → af-zt (helper u v)))
+af-left-sum {A = A} (now r) =
+  later (λ u → later (λ v → now (helper u v)))
   where
     helper : ∀ u v a b → (left-sum-lift A a b ⊎ left-sum-lift A u a) ⊎
                           (left-sum-lift A v a ⊎ left-sum-lift A u v)
@@ -467,8 +467,8 @@ af-left-sum {A = A} (af-zt r) =
     helper (inj₂ uy) (inj₁ vx) (inj₂ ay) b = inj₁ (inj₂ tt)
     helper (inj₂ uy) (inj₂ vy) a b = inj₂ (inj₂ tt)
 
-af-left-sum {X} {Y} {A} (af-sup s) =
-  af-sup (λ u → helper u)
+af-left-sum {X} {Y} {A} (later s) =
+  later (λ u → helper u)
   where
     helper : ∀ u → Almost-full (λ a b → left-sum-lift A a b ⊎
                                           left-sum-lift A u a)
@@ -482,7 +482,7 @@ af-left-sum {X} {Y} {A} (af-sup s) =
         helper₁ (inj₂ _) (inj₁ _) = inj₁
         helper₁ (inj₂ _) (inj₂ _) = λ r → inj₁ tt
 
-    helper (inj₂ uy) = af-sup (λ v → helper₁ v)
+    helper (inj₂ uy) = later (λ v → helper₁ v)
       where
         helper₁ : ∀ v → Almost-full
           (λ a b → (left-sum-lift A a b ⊎ left-sum-lift A (inj₂ uy) a) ⊎
@@ -498,7 +498,7 @@ af-left-sum {X} {Y} {A} (af-sup s) =
             helper₂ (inj₂ _) (inj₁ _) = λ ()
             helper₂ (inj₂ _) (inj₂ _) = const (inj₁ (inj₁ tt))
 
-        helper₁ (inj₂ vy) = af-zt (λ _ b →
+        helper₁ (inj₂ vy) = now (λ _ b →
           [ (const (inj₂ (inj₂ tt))) , const (inj₂ (inj₂ tt)) ]′ b)
 
 -- transpose

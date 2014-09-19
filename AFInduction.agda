@@ -20,11 +20,13 @@
 
 module AFInduction where
 
+open import Level
+  renaming (zero to lzero; suc to lsuc)
+
 open import Data.Nat
-open import Data.Product
-open import Data.Sum
+open import Data.Product as Prod
+open import Data.Sum as Sum
   using (_⊎_; inj₁; inj₂; [_,_]′ )
-  renaming (map to map⊎)
 open import Data.Empty
 open import Data.Star
 open import Data.Plus
@@ -46,8 +48,6 @@ open import Function
 import Function.Related
 
 open import Induction.WellFounded
-
-import Level
 
 open import AlmostFull
 open import AFConstructions

@@ -20,11 +20,13 @@
 
 module AlmostFull where
 
+open import Level
+  renaming (zero to lzero; suc to lsuc)
+
 open import Data.Nat
 open import Data.Product
-open import Data.Sum
+open import Data.Sum as Sum
   using (_⊎_; inj₁; inj₂; [_,_]′ )
-  renaming (map to map⊎)
 open import Data.Empty
 open import Data.Star
 open import Data.Plus
@@ -50,24 +52,23 @@ open import Relation.Binary.Product.Pointwise
 
 open import Induction.WellFounded
 
-import Level
 
 --
 --  Basic setup, and almost-full relations
 --
 
-data Almost-full {ℓ} {X : Set ℓ} : Rel X ℓ → Set (Level.suc ℓ) where
-  af-zt  : ∀ {R} → (r : ∀ x y → R x y) →
-               Almost-full R
-  af-sup : ∀ {R} → (s : ∀ u → Almost-full (λ x y → R x y ⊎ R u x)) →
-               Almost-full R
+data Almost-full {ℓ} {X : Set ℓ} : Rel X ℓ → Set (lsuc ℓ) where
+  now   : ∀ {R} → (n : ∀ x y → R x y) →
+                Almost-full R
+  later : ∀ {R} → (l : ∀ u → Almost-full (λ x y → R x y ⊎ R u x)) →
+                Almost-full R
 
 af-⇒ : 
   ∀ {ℓ} {X : Set ℓ} {A B : Rel X ℓ} → Almost-full A → 
   (∀ x y → A x y → B x y) → Almost-full B
-af-⇒ (af-zt r) a→b =
-  af-zt (λ x y → a→b x y (r x y) )
-af-⇒ {_} {X} {A} {B} (af-sup s) a→b = af-sup (λ u →
+af-⇒ (now r) a→b =
+  now (λ x y → a→b x y (r x y) )
+af-⇒ {_} {X} {A} {B} (later s) a→b = later (λ u →
   af-⇒ (s u)
     (λ x y →
       (A x y ⊎ A u x)
@@ -86,9 +87,9 @@ sec-binary-infinite-chain :
     ∀ {ℓ} {X : Set ℓ} {R} (f : ℕ → X) → Almost-full R → 
     ∀ (k : ℕ) →
     ∃ λ m → ∃ λ n → (k ≤ m) × (m < n) × R (f m) (f n)
-sec-binary-infinite-chain f (af-zt {R'} r) k =
+sec-binary-infinite-chain f (now {R'} r) k =
   k , (suc k) , ≤-refl , ≤-refl , (R' (f k) (f (suc k)) ∋ r (f k) (f (suc k)))
-sec-binary-infinite-chain {R} f (af-sup {R'} s) k
+sec-binary-infinite-chain {R} f (later {R'} s) k
   with sec-binary-infinite-chain f (s (f k)) (suc k)
 ... | m , n , k<m , m<n , inj₁ r =
   m , n , ≤-pred (≤-step k<m) , m<n , (R' (f m) (f n) ∋ r)
@@ -110,7 +111,7 @@ af-iter : ∀ {ℓ} {X : Set ℓ} {R : Rel X ℓ}
          (decR : Decidable R) (z : X) (accX : Acc R z) →
          Almost-full (λ x y → ¬ R x z ⊎ ¬ R y x)
 
-af-iter {R = R} d z (acc rs) = af-sup (λ u → help u (d u z))
+af-iter {R = R} d z (acc rs) = later (λ u → help u (d u z))
   where
     open Related.EquationalReasoning
     help : ∀ u → Dec (R u z) →
@@ -122,11 +123,11 @@ af-iter {R = R} d z (acc rs) = af-sup (λ u → help u (d u z))
           (¬ R x u ⊎ ¬ R y x)
             ∼⟨ [ inj₂ ∘ inj₂ , inj₁ ∘ inj₂ ]′ ⟩
           ((¬ R x z ⊎ ¬ R y x) ⊎ ¬ R u z ⊎ ¬ R x u) ∎)
-    help y (no ¬ruz) = af-zt (λ x y → inj₂ (inj₁ ¬ruz))
+    help y (no ¬ruz) = now (λ x y → inj₂ (inj₁ ¬ruz))
 
 af-from-wf : ∀ {ℓ} {X : Set ℓ} {R : Rel X ℓ} →
   Well-founded R → Decidable R → Almost-full (λ x y → ¬ (R y x))
-af-from-wf {R = R} w d = af-sup (λ u →
+af-from-wf {R = R} w d = later (λ u →
   af-⇒
     (af-iter d u (w u))
     (λ x y →
@@ -150,9 +151,9 @@ acc-from-af :
   ∀ {ℓ} {X : Set ℓ} {R : Rel X ℓ} →
   Almost-full R → (T : Rel X ℓ)→ ∀ x →
   (∀ z y → Star T y x → z [ T ]⁺ y → R y z → ⊥) → Acc T x
-acc-from-af (af-zt r) T x h =
+acc-from-af (now r) T x h =
   acc (λ z t → ⊥-elim (h z x ε [ T z x ∋ t ] (r x z)))
-acc-from-af {R = R} (af-sup s) T x h = acc (λ z tzx →
+acc-from-af {R = R} (later s) T x h = acc (λ z tzx →
   acc-from-af (s x) T z
     (λ u y tyz t+uy →
       ((R y u ⊎ R x y → ⊥)
@@ -200,36 +201,36 @@ data WFT {ℓ} (X  :  Set ℓ) : Set ℓ where
   zt  : WFT X
   sup : (g : X → WFT X) → WFT X
 
-data Almost-full# {ℓ} {X : Set ℓ} : Rel X ℓ → WFT X → Set (Level.suc ℓ) where
-  af-zt#  : ∀ {R} → (r : ∀ x y → R x y) →
+data Almost-full# {ℓ} {X : Set ℓ} : Rel X ℓ → WFT X → Set (lsuc ℓ) where
+  now#  : ∀ {R} → (r : ∀ x y → R x y) →
               Almost-full# R zt
-  af-sup# : ∀ {R} →
+  later# : ∀ {R} →
               (g : X → WFT X)
               (s : ∀ u → Almost-full# (λ x y → R x y ⊎ R u x) (g u)) →
               Almost-full# R (sup g)
 
 wft-from-af : ∀ {ℓ} {X : Set ℓ} {R : Rel X ℓ} → Almost-full R → WFT X
-wft-from-af (af-zt r) = zt
-wft-from-af (af-sup s) = sup (λ u → wft-from-af (s u))
+wft-from-af (now r) = zt
+wft-from-af (later s) = sup (λ u → wft-from-af (s u))
 
 af⇒af# : ∀ {ℓ} {X : Set ℓ} {R : Rel X ℓ} → (afR : Almost-full R) →
               Almost-full# R (wft-from-af afR)
-af⇒af# (af-zt r) = af-zt# r
-af⇒af# (af-sup s) =
-  af-sup# (λ u → wft-from-af (s u)) (λ u → af⇒af# (s u))
+af⇒af# (now r) = now# r
+af⇒af# (later s) =
+  later# (λ u → wft-from-af (s u)) (λ u → af⇒af# (s u))
 
 af#⇒af : ∀ {ℓ} {X : Set ℓ} {R : Rel X ℓ} {t : WFT X} →
            Almost-full# R t → Almost-full R
-af#⇒af (af-zt# r) = af-zt r
-af#⇒af (af-sup# g s) = af-sup (λ u → af#⇒af (s u))
+af#⇒af (now# r) = now r
+af#⇒af (later# g s) = later (λ u → af#⇒af (s u))
 
 af#-⇒ : 
   ∀ {ℓ} {X : Set ℓ} {A : Rel X ℓ} (t : WFT X) → Almost-full# A t → 
   ∀ {B : Rel X ℓ} → (∀ x y → A x y → B x y) → Almost-full# B t
-af#-⇒ zt (af-zt# r) a→b =
-  af-zt# (λ x y → a→b x y (r x y))
-af#-⇒ {_} {X} {A} (sup g) (af-sup# .g s) {B} a→b =
-  af-sup# g (λ u →
+af#-⇒ zt (now# r) a→b =
+  now# (λ x y → a→b x y (r x y))
+af#-⇒ {_} {X} {A} (sup g) (later# .g s) {B} a→b =
+  later# g (λ u →
     af#-⇒ (g u) (s u)
       (λ x y →
         (A x y ⊎ A u x)
@@ -250,19 +251,19 @@ Almost-full! : ∀ {ℓ} {X : Set ℓ} (R : Rel X ℓ) → Set ℓ
 Almost-full! {X = X} R = Σ (WFT X) (λ t → Secure-by R t)
 
 af!⇒af : ∀ {ℓ} {X : Set ℓ} {R : Rel X ℓ} → Almost-full! R → Almost-full R
-af!⇒af (zt , srt) = af-zt srt
+af!⇒af (zt , srt) = now srt
 af!⇒af (sup g , srt) =
-  af-sup (λ u → af!⇒af (g u , srt u))
+  later (λ u → af!⇒af (g u , srt u))
 
 af⇒af! : ∀ {ℓ} {X : Set ℓ} {R : Rel X ℓ} → Almost-full R → Almost-full! R
-af⇒af! (af-zt r) = zt , r
-af⇒af! (af-sup s) =
+af⇒af! (now r) = zt , r
+af⇒af! (later s) =
   sup (λ u → proj₁ (af⇒af! (s u))) , (λ u → proj₂ (af⇒af! (s u)))
 
 af⇒sec : ∀ {ℓ} {X : Set ℓ} {R : Rel X ℓ} → (afR : Almost-full R) →
            Secure-by R (wft-from-af afR)
-af⇒sec (af-zt r) = r
-af⇒sec (af-sup s) = λ u → af⇒sec (s u)
+af⇒sec (now r) = r
+af⇒sec (later s) = λ u → af⇒sec (s u)
 
 sec-⇒ :
   ∀ {ℓ} {X : Set ℓ} {A : Rel X ℓ} → (t : WFT X) → Secure-by A t → 
